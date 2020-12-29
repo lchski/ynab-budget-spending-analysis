@@ -5,6 +5,8 @@ library(janitor)
 
 library(helpers)
 
+accounts <- read_csv("data/indices/accounts.csv")
+
 budget <- read_csv("data/source/budget.csv") %>% clean_names
 register <- read_csv("data/source/register.csv") %>%
   clean_names %>%
@@ -12,4 +14,10 @@ register <- read_csv("data/source/register.csv") %>%
     c("outflow", "inflow"),
     ~ as.numeric(str_remove_all(.x, "[^0-9\\.]"))
   ) %>%
-  mutate(spend = inflow - outflow)
+  mutate(spend = inflow - outflow) %>%
+  mutate(
+    is_income = category == "To be Budgeted",
+    is_reconciliation = payee == "Reconciliation Balance Adjustment",
+    is_transfer = str_detect(payee, "^Transfer : ")
+  ) %>%
+  left_join(accounts)
