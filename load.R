@@ -16,7 +16,7 @@ register <- read_csv("data/source/register.csv") %>%
   ) %>%
   mutate(spend = inflow - outflow) %>%
   mutate(
-    is_income = category == "To be Budgeted",
+    is_income = category == "Ready to Assign", ## used to be "To be Budgeted"
     is_reconciliation = payee == "Reconciliation Balance Adjustment",
     is_transfer = str_detect(payee, "^Transfer : ")
   ) %>%
