@@ -149,8 +149,8 @@ summarize_month <- function(transactions, month_to_summarize) {
   )
 }
 
-tibble(
-  month = c("2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01")
+monthly_summaries <- tibble(
+  month = seq(from = ymd("2016-01-01"), to = today(), by = "1 month")
 ) %>%
   mutate(summary = map(
     month, 
@@ -158,10 +158,11 @@ tibble(
       summarize_month(.x) %>%
       unnest_wider(col = everything(), names_sep = "___")
   )) %>%
-  unnest(summary) %>%
-  glimpse()
+  unnest(summary)
 
-register %>%
-  summarize_month("2022-02-01") %>%
-  unnest_wider(col = everything(), names_sep = "___") %>%
-  glimpse
+# TODO: figure out why the summaries only go to 2018-05-01 - likely something to do with employment income / returning NAs?
+
+monthly_summaries %>%
+  ggplot(aes(x = month, y = spending___wants)) +
+  geom_line() +
+  geom_smooth()
