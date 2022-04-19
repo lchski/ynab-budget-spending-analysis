@@ -25,12 +25,8 @@ monthly_spend_pct %>%
   arrange(ymonth, -spend_pct) %>%
   View()
 
-# Net worth
-register %>%
-  filter(ymonth <= "2022-03-01") %>%
-  filter(account_type == "budget") %>% # by account type
-  filter(! str_detect(account, "^Pension –")) %>%
-  count(wt = spend, name = "spend")
+
+
 
 # Spending
 register %>%
@@ -109,33 +105,3 @@ summarize_month <- function(transactions, month_to_summarize) {
     net_worth = summarize_net_worth(transactions, month_to_summarize)
   )
 }
-
-tibble(
-  total = list(
-    net_worth_transactions %>%
-      filter(! str_detect(account, "^Pension –"))
-  ),
-  liquid = list(
-    net_worth_transactions %>%
-      filter(! str_detect(account, "^Pension –")) %>%
-      filter(account_type == "budget")
-  ),
-  illiquid = list(
-    net_worth_transactions %>%
-      filter(! str_detect(account, "^Pension –")) %>%
-      filter(account_type == "tracking")
-  ),
-  incl_pension_total = list(
-    net_worth_transactions
-  ),
-  incl_pension_illiquid = list(
-    net_worth_transactions %>%
-      filter(account_type == "tracking")
-  )
-) %>%
-  mutate(across(
-    everything(),
-    ~ map_dbl(.x, ~ .x %>%
-      count(wt = spend, name = "spend") %>%
-      pull(spend))
-  ))
