@@ -27,24 +27,6 @@ monthly_spend_pct %>%
 
 
 
-
-# Spending
-register %>%
-  filter(
-    ymonth == "2022-02-01",
-    account_type == "budget"
-  ) %>%
-  filter(! is_income) %>%
-  count(wt = spend, name = "spend")
-
-# Spending by category
-register %>%
-  filter(
-    ymonth == "2022-02-01",
-    account_type == "budget"
-  ) %>%
-  count(category_type, wt = spend, name = "spend")
-
 # Net income
 register %>%
   filter(
@@ -68,7 +50,7 @@ read_csv("../pay-stubs-analysis/data/out/monthly-summaries.csv") %>%
 summarize_net_worth <- function(transactions, month) {
   net_worth_transactions <- transactions %>%
     filter(ymonth <= month)
-  
+
   tibble(
     total = list(
       net_worth_transactions %>%
@@ -100,8 +82,46 @@ summarize_net_worth <- function(transactions, month) {
     ))
 }
 
+summarize_spending <- function(transactions, month) {
+  spending_transactions <- transactions %>%
+    filter(
+      ymonth == month,
+      account_type == "budget"
+    ) %>%
+    filter(! is_income)
+
+  tibble(
+    total = list(
+      spending_transactions
+    ),
+    needs = list(
+      spending_transactions %>%
+        filter(category_type == "Needs")
+    ),
+    wants = list(
+      spending_transactions %>%
+        filter(category_type == "Wants")
+    ),
+    savings = list(
+      spending_transactions %>%
+        filter(category_type == "Savings")
+    )
+  ) %>%
+    mutate(across(
+      everything(),
+      ~ map_dbl(.x, ~ .x %>%
+                  count(wt = spend, name = "spend") %>%
+                  pull(spend))
+    ))
+}
+
 summarize_month <- function(transactions, month_to_summarize) {
   tibble(
-    net_worth = summarize_net_worth(transactions, month_to_summarize)
+    net_worth = summarize_net_worth(transactions, month_to_summarize),
+    spending = summarize_spending(transactions, month_to_summarize)
   )
 }
+
+register %>%
+  summarize_month("2022-02-01") %>%
+  unnest_wider(col = everything(), names_sep = "___")
