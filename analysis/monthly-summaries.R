@@ -28,10 +28,7 @@ monthly_spend_pct %>%
 
 
 # Employment income
-read_csv("../pay-stubs-analysis/data/out/monthly-summaries.csv") %>%
-  filter(
-    month == "2022-02-01"
-  )
+pay_stub_summaries <- read_csv("../pay-stubs-analysis/data/out/monthly-summaries.csv")
 
 summarize_net_worth <- function(transactions, month) {
   net_worth_transactions <- transactions %>%
@@ -137,11 +134,18 @@ summarize_net_income <- function(transactions, month) {
   )
 }
 
+summarize_employment_income <- function(month_to_summarize) {
+  pay_stub_summaries %>%
+    filter(month == month_to_summarize) %>%
+    select(gross, deductions = total_taxes_and_deductions, net, cpp_qpp, pspp = pension)
+}
+
 summarize_month <- function(transactions, month_to_summarize) {
   tibble(
     net_worth = summarize_net_worth(transactions, month_to_summarize),
     spending = summarize_spending(transactions, month_to_summarize),
-    net_income = summarize_net_income(transactions, month_to_summarize)
+    net_income = summarize_net_income(transactions, month_to_summarize),
+    employment_income = summarize_employment_income(month_to_summarize)
   )
 }
 
