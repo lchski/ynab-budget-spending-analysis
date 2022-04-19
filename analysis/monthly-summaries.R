@@ -27,20 +27,6 @@ monthly_spend_pct %>%
 
 
 
-# Net income
-register %>%
-  filter(
-    ymonth == "2022-02-01",
-    account_type == "budget"
-  ) %>%
-  filter(is_income) %>%
-  mutate(income_type = case_when(
-    payee == "Government of Canada" ~ "Employment",
-    payee == "EQ Bank" ~ "Interest",
-    TRUE ~ "Other"
-  )) %>%
-  count(income_type, wt = spend, name = "spend")
-
 # Employment income
 read_csv("../pay-stubs-analysis/data/out/monthly-summaries.csv") %>%
   filter(
@@ -86,9 +72,9 @@ summarize_spending <- function(transactions, month) {
   spending_transactions <- transactions %>%
     filter(
       ymonth == month,
-      account_type == "budget"
-    ) %>%
-    filter(! is_income)
+      account_type == "budget",
+      ! is_income
+    )
 
   tibble(
     total = list(
@@ -115,13 +101,63 @@ summarize_spending <- function(transactions, month) {
     ))
 }
 
-summarize_month <- function(transactions, month_to_summarize) {
-  tibble(
-    net_worth = summarize_net_worth(transactions, month_to_summarize),
-    spending = summarize_spending(transactions, month_to_summarize)
+register %>%
+  filter(
+    ymonth == "2022-02-01",
+    account_type == "budget"
+  ) %>%
+  filter(is_income) %>%
+  mutate(income_type = case_when(
+    payee == "Government of Canada" ~ "Employment",
+    payee == "EQ Bank" ~ "Interest",
+    TRUE ~ "Other"
+  )) %>%
+  count(income_type, wt = spend, name = "spend")
+
+summarize_net_income <- function(transactions, month) {
+  net_income_transactions <- register %>%
+    filter(
+      ymonth == month,
+      account_type == "budget",
+      is_income
+    ) %>%
+    mutate(income_type = case_when(
+      payee == "Government of Canada" ~ "employment_salaried",
+      str_detect(memo, fixed("Invoice", ignore_case = TRUE)) ~ "employment_self_employed",
+      payee == "EQ Bank" ~ "interest",
+      TRUE ~ "other"
+    ))
+  
+  bind_cols(
+    net_income_transactions %>%
+      count(wt = spend, name = "total"),
+    net_income_transactions %>%
+      count(income_type, wt = spend, name = "spend") %>%
+      pivot_wider(names_from = income_type, values_from = spend)
   )
 }
 
+summarize_month <- function(transactions, month_to_summarize) {
+  tibble(
+    net_worth = summarize_net_worth(transactions, month_to_summarize),
+    spending = summarize_spending(transactions, month_to_summarize),
+    net_income = summarize_net_income(transactions, month_to_summarize)
+  )
+}
+
+tibble(
+  month = c("2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01")
+) %>%
+  mutate(summary = map(
+    month, 
+    ~ register %>%
+      summarize_month(.x) %>%
+      unnest_wider(col = everything(), names_sep = "___")
+  )) %>%
+  unnest(summary) %>%
+  glimpse()
+
 register %>%
   summarize_month("2022-02-01") %>%
-  unnest_wider(col = everything(), names_sep = "___")
+  unnest_wider(col = everything(), names_sep = "___") %>%
+  glimpse
